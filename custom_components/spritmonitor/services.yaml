@@ -24,12 +24,14 @@ add_fueling:
               label: "2 (Hybrid Battery / AdBlue)"
 
     date:
-      name: Date
-      description: "Date of the fueling to be added."
+      name: Date entity
+      description: "Select a sensor or input_datetime entity providing a date or timestamp; it is sent as DD.MM.YYYY."
       required: true
-      example: "2019-01-15"
       selector:
-        date:
+        entity:
+          domain:
+            - sensor
+            - input_datetime
 
     odometer_entity:
       name: Current odometer entity
