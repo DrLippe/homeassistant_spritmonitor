@@ -59,7 +59,7 @@ SERVICE_ADD_FUELING_SCHEMA = vol.Schema(
     {
         vol.Required("vehicle_device"): cv.string,
         vol.Required("tank_id"): vol.Coerce(int),
-        vol.Required("date"): cv.datetime,
+        vol.Required("date"): cv.entity_id,
         vol.Required("odometer_entity"): cv.entity_id,
         vol.Required("quantity"): cv.entity_id,
         vol.Required("type"): cv.string,
