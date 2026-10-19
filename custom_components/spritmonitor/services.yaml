@@ -41,11 +41,11 @@ add_fueling:
 
     quantity:
       name: Quantity
-      description: "Amount of fuel of the fueling to be added."
+      description: "Select an entity whose state supplies quantity."
       required: true
-      example: "45.4"
       selector:
-        text:
+        entity:
+          domain: sensor
 
     type:
       name: Type
@@ -136,10 +136,10 @@ add_fueling:
 
     price:
       name: Price
-      description: "Price of the fueling to be added."
-      example: "89.4"
+      description: "Select an entity whose state supplies price."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     currency_id:
       name: Currency
@@ -231,24 +231,24 @@ add_fueling:
 
     note:
       name: Note
-      description: "Free text note of the user for the fueling to be added."
-      example: "My note for this fueling"
+      description: "Select an entity whose state supplies note."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     stationname:
       name: Station Name
-      description: "Gas station company for the fueling to be added."
-      example: "Shell"
+      description: "Select an entity whose state supplies stationname."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     location:
       name: Location
-      description: "Free text location name for the fueling to be added."
-      example: "Moosacher Straße"
+      description: "Select an entity whose state supplies location."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     country:
       name: Country
@@ -338,59 +338,59 @@ add_fueling:
 
     bc_consumption:
       name: BC Consumption
-      description: "Consumption according to the vehicle's bordcomputer."
-      example: "7.2"
+      description: "Select an entity whose state supplies bc_consumption."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     bc_quantity:
       name: BC Quantity
-      description: "Consumed quantity according to the vehicle's bordcomputer."
-      example: "53.4"
+      description: "Select an entity whose state supplies bc_quantity."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     bc_speed:
       name: BC Speed
-      description: "Average speed according to the vehicle's bordcomputer."
-      example: "53.4"
+      description: "Select an entity whose state supplies bc_speed."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     latitude:
       name: Latitude
-      description: "Latitude of gas station."
-      example: "48.137154"
+      description: "Select an entity whose state supplies latitude."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     longitude:
       name: Longitude
-      description: "Longitude of gas station."
-      example: "11.576124"
+      description: "Select an entity whose state supplies longitude."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     percentage:
       name: Percentage
-      description: "Charge level of electric vehicle after charging."
-      example: "80"
+      description: "Select an entity whose state supplies percentage."
       selector:
-        number:
+        entity:
+          domain: sensor
 
     charging_power:
       name: Charging Power
-      description: "Charge power in kW used to charge the electric vehicle."
-      example: "11"
+      description: "Select an entity whose state supplies charging_power."
       selector:
-        text:
+        entity:
+          domain: sensor
 
     charging_duration:
       name: Charging Duration
-      description: "Duration in minutes that the electric vehicle was charged."
-      example: "195"
+      description: "Select an entity whose state supplies charging_duration."
       selector:
-        number:
+        entity:
+          domain: sensor
 
     charge_info_ac_dc:
       name: Charge Type
