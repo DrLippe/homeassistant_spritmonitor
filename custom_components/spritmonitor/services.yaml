@@ -31,13 +31,13 @@ add_fueling:
       selector:
         date:
 
-    trip:
-      name: Trip
-      description: "Trip of the fueling to be added."
+    odometer_entity:
+      name: Current odometer entity
+      description: "Select a numeric entity reporting the vehicle odometer. Trip is calculated automatically from the last Spritmonitor entry of the matching fuel type."
       required: true
-      example: "652.4"
       selector:
-        text:
+        entity:
+          domain: sensor
 
     quantity:
       name: Quantity
@@ -133,12 +133,6 @@ add_fueling:
             - value: "5"
               label: "Killowatt hour"
 
-    odometer:
-      name: Odometer
-      description: "Odometer of the fueling to be added."
-      example: "45123"
-      selector:
-        number:
 
     price:
       name: Price
