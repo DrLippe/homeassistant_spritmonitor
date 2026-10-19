@@ -9,6 +9,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
+from .api import api_get, api_headers, SpritmonitorAPIError
+
 from .const import (
     DOMAIN,
     SERVICE_ADD_FUELING_SCHEMA,
@@ -41,7 +43,6 @@ def async_setup_services(hass: HomeAssistant) -> None:
 async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
     """Add a fueling entry to Spritmonitor."""
     data = dict(call.data)  # Make mutable copy
-    _LOGGER.debug("Service call data: %s", data)
 
     # Handle position
     _validate_position(data)
@@ -183,35 +184,17 @@ def _combine_charge_info(data: dict, params: dict) -> None:
 
 async def _submit_fueling(hass: HomeAssistant, entry, vehicle_id: str, tank_id: str, params: dict) -> None:
     url = f"{API_BASE_URL}/vehicle/{vehicle_id}/tank/{tank_id}/fueling.json"
-    headers = {
-        "Accept": "application/json",
-        "Application-Id": entry.data[CONF_APP_TOKEN],
-        "Authorization": entry.data[CONF_BEARER_TOKEN],
-    }
+    headers = api_headers(entry.data[CONF_APP_TOKEN], entry.data[CONF_BEARER_TOKEN])
     session = async_get_clientsession(hass)
-    _LOGGER.info("Submitting fueling to Spritmonitor: %s", params)
-
     try:
-        async with session.post(url, data=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-            resp_text = await response.text()
-            _LOGGER.debug("Response status: %s, text: %s", response.status, resp_text)
-            try:
-                resp_json = await response.json()
-            except Exception:
-                resp_json = {"raw_response": resp_text}
+        # Spritmonitor's official Add_Fuel_Entry sample submits query parameters via GET.
+        result = await api_get(session, url, headers, params=params)
+        if not isinstance(result, dict):
+            raise HomeAssistantError("Unexpected Spritmonitor response")
 
-            if response.status != 200:
-                error_msg = resp_json.get("errors", resp_json.get("message", resp_text))
-                raise HomeAssistantError(f"API Error ({response.status}): {error_msg}")
-            if resp_json.get("errors"):
-                raise HomeAssistantError(f"API Errors: {resp_json['errors']}")
-
-            _LOGGER.info("Fueling successfully added for vehicle %s (tank %s)", vehicle_id, tank_id)
-
-            coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-            if coordinator:
-                _LOGGER.debug("Refreshing data coordinator for vehicle %s", vehicle_id)
-                await coordinator.async_request_refresh()
-
-    except aiohttp.ClientError as err:
-        raise HomeAssistantError(f"Connection error: {err}") from err
+        _LOGGER.info("Fueling successfully added for vehicle %s (tank %s)", vehicle_id, tank_id)
+        coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+        if coordinator:
+            await coordinator.async_request_refresh()
+    except (aiohttp.ClientError, SpritmonitorAPIError, TimeoutError) as err:
+        raise HomeAssistantError(f"Spritmonitor API request failed: {err}") from err
