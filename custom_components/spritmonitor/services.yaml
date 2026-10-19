@@ -45,7 +45,10 @@ add_fueling:
       required: true
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     type:
       name: Type
@@ -139,7 +142,10 @@ add_fueling:
       description: "Select an entity whose state supplies price."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     currency_id:
       name: Currency
@@ -234,21 +240,27 @@ add_fueling:
       description: "Select an entity whose state supplies note."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_text
 
     stationname:
       name: Station Name
       description: "Select an entity whose state supplies stationname."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_text
 
     location:
       name: Location
       description: "Select an entity whose state supplies location."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_text
 
     country:
       name: Country
@@ -341,56 +353,80 @@ add_fueling:
       description: "Select an entity whose state supplies bc_consumption."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     bc_quantity:
       name: BC Quantity
       description: "Select an entity whose state supplies bc_quantity."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     bc_speed:
       name: BC Speed
       description: "Select an entity whose state supplies bc_speed."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     latitude:
       name: Latitude
       description: "Select an entity whose state supplies latitude."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     longitude:
       name: Longitude
       description: "Select an entity whose state supplies longitude."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     percentage:
       name: Percentage
       description: "Select an entity whose state supplies percentage."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     charging_power:
       name: Charging Power
       description: "Select an entity whose state supplies charging_power."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     charging_duration:
       name: Charging Duration
       description: "Select an entity whose state supplies charging_duration."
       selector:
         entity:
-          domain: sensor
+          domain:
+            - sensor
+            - input_number
+            - number
 
     charge_info_ac_dc:
       name: Charge Type
