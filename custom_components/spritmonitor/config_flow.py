@@ -6,6 +6,8 @@ import voluptuous as vol
 import aiohttp
 import logging
 
+from .api import api_get, api_headers, SpritmonitorAPIError
+
 from .const import (
     DOMAIN,
     DEFAULT_APP_TOKEN,
@@ -47,7 +49,7 @@ class SpritmonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_create_entry(title=title, data=user_input)
                 else:
                     errors["base"] = "invalid_auth"
-            except aiohttp.ClientError:
+            except (aiohttp.ClientError, SpritmonitorAPIError, TimeoutError):
                 errors["base"] = "cannot_connect"
             except Exception as e:
                 _LOGGER.error("Error during configuration: %s", e)
@@ -74,8 +76,5 @@ class SpritmonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _get_vehicle_info(self, session: aiohttp.ClientSession, vehicle_id: int, app_token: str, bearer_token: str) -> dict | None:
-        headers = { "Application-Id": app_token, "Authorization": bearer_token }
-        async with session.get(API_VEHICLES_URL, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
-            response.raise_for_status()
-            vehicles = await response.json()
-            return next((v for v in vehicles if v["id"] == vehicle_id), None)
+        vehicles = await api_get(session, API_VEHICLES_URL, api_headers(app_token, bearer_token), timeout=10)
+        return next((v for v in vehicles if int(v["id"]) == vehicle_id), None)
