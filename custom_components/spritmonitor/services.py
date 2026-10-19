@@ -1,6 +1,7 @@
 """Define services for the Spritmonitor integration."""
 
 from datetime import datetime as dt
+from math import isfinite
 import logging
 import aiohttp
 
@@ -55,6 +56,9 @@ async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
     # Parse date
     data["date"] = _parse_date(data.get("date"))
 
+    # Get the current odometer and derive trip from the last Spritmonitor entry.
+    data["odometer"], data["trip"] = await _calculate_trip(hass, entry, data)
+
     # Prepare parameters
     params = _prepare_base_params(data)
     params.update(_prepare_optional_params(data))
@@ -63,6 +67,58 @@ async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
 
     # Submit fueling
     await _submit_fueling(hass, entry, vehicle_id, data["tank_id"], params)
+
+
+async def _calculate_trip(hass: HomeAssistant, entry, data: dict) -> tuple[float, float]:
+    """Compute distance from the latest matching Spritmonitor fueling entry."""
+    entity_id = data["odometer_entity"]
+    state = hass.states.get(entity_id)
+    if state is None or state.state in ("unknown", "unavailable", ""):
+        raise HomeAssistantError(f"Odometer entity {entity_id} is unavailable")
+    try:
+        current = float(state.state)
+    except (TypeError, ValueError) as err:
+        raise HomeAssistantError(f"Odometer entity {entity_id} is not numeric") from err
+    if not isfinite(current) or current < 0:
+        raise HomeAssistantError("Current odometer must be a finite nonnegative number")
+
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is None:
+        raise HomeAssistantError("Spritmonitor vehicle coordinator not initialized")
+    await coordinator.async_request_refresh()
+    snapshot = coordinator.data or {}
+    vehicle = snapshot.get("vehicle") or {}
+    trip_unit = vehicle.get("tripunit")
+    entity_unit = state.attributes.get("unit_of_measurement")
+    if trip_unit and entity_unit and trip_unit.lower() != str(entity_unit).lower():
+        raise HomeAssistantError(
+            f"Odometer unit {entity_unit} does not match Spritmonitor unit {trip_unit}"
+        )
+
+    # PHEVs have separate fuel and electricity histories.
+    electric = int(data["fuelsort_id"]) in (19, 24)
+    if electric:
+        previous = snapshot.get("last_electric_charge")
+    else:
+        previous = snapshot.get("last_gas_refueling")
+    if previous is None and not electric:
+        previous = snapshot.get("last_refueling")
+    if not previous or previous.get("odometer") is None:
+        raise HomeAssistantError(
+            "No previous Spritmonitor odometer for this fuel type; add a baseline first"
+        )
+    try:
+        last = float(previous["odometer"])
+    except (ValueError, TypeError) as err:
+        raise HomeAssistantError("Last Spritmonitor odometer is not numeric") from err
+    if not isfinite(last):
+        raise HomeAssistantError("Last Spritmonitor odometer is invalid")
+    trip = current - last
+    if trip < 0:
+        raise HomeAssistantError(
+            f"Current odometer ({current}) is lower than last Spritmonitor reading ({last})"
+        )
+    return current, round(trip, 3)
 
 
 def _validate_position(data: dict) -> None:
@@ -111,6 +167,7 @@ def _prepare_base_params(data: dict) -> dict:
     return {
         "date": data["date"].strftime("%d.%m.%Y"),
         "trip": data["trip"],
+        "odometer": data["odometer"],
         "quantity": data["quantity"],
         "type": data["type"],
         "fuelsortid": data["fuelsort_id"],
@@ -121,7 +178,6 @@ def _prepare_base_params(data: dict) -> dict:
 def _prepare_optional_params(data: dict) -> dict:
     """Prepare optional parameters for the API call."""
     mapping = {
-        "odometer": "odometer",
         "price": "price",
         "currency_id": "currencyid",
         "pricetype": "pricetype",
