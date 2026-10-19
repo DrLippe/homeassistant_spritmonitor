@@ -20,6 +20,7 @@ from .const import (
     CONF_APP_TOKEN,
     CONF_BEARER_TOKEN,
     API_BASE_URL,
+    ENTITY_VALUE_FIELDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,6 +46,8 @@ async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
     """Add a fueling entry to Spritmonitor."""
     data = dict(call.data)  # Make mutable copy
 
+    _resolve_entity_fields(hass, data)
+
     # Handle position
     _validate_position(data)
 
@@ -67,6 +70,32 @@ async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
 
     # Submit fueling
     await _submit_fueling(hass, entry, vehicle_id, data["tank_id"], params)
+
+
+def _resolve_entity_fields(hass: HomeAssistant, data: dict) -> None:
+    """Resolve service entity IDs to their current states."""
+    for field, value_type in ENTITY_VALUE_FIELDS.items():
+        entity_id = data.get(field)
+        if entity_id is None:
+            continue
+        state = hass.states.get(entity_id)
+        if state is None or state.state in ("unknown", "unavailable", ""):
+            raise HomeAssistantError(f"Entity {entity_id} for {field} is unavailable")
+        try:
+            if value_type is str:
+                value = state.state
+            else:
+                numeric = float(state.state)
+                if not isfinite(numeric):
+                    raise ValueError("non-finite number")
+                if value_type is int and not numeric.is_integer():
+                    raise ValueError("not an integer")
+                value = value_type(numeric)
+        except (ValueError, TypeError) as err:
+            raise HomeAssistantError(
+                f"Entity {entity_id} has an invalid value for {field}"
+            ) from err
+        data[field] = value
 
 
 async def _calculate_trip(hass: HomeAssistant, entry, data: dict) -> tuple[float, float]:
