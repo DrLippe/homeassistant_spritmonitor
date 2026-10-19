@@ -36,6 +36,23 @@ VEHICLE_TYPE_COMBUSTION = "combustion"
 VEHICLE_TYPE_ELECTRIC = "electric"
 VEHICLE_TYPE_PHEV = "phev"
 
+# Fields whose service values refer to Home Assistant entities.
+ENTITY_VALUE_FIELDS = {
+    "quantity": float,
+    "price": float,
+    "note": str,
+    "stationname": str,
+    "location": str,
+    "bc_consumption": float,
+    "bc_quantity": float,
+    "bc_speed": float,
+    "latitude": float,
+    "longitude": float,
+    "percentage": int,
+    "charging_power": float,
+    "charging_duration": int,
+}
+
 # Service constants
 SERVICE_ADD_FUELING = "add_fueling"
 SERVICE_ADD_FUELING_SCHEMA = vol.Schema(
@@ -44,26 +61,26 @@ SERVICE_ADD_FUELING_SCHEMA = vol.Schema(
         vol.Required("tank_id"): vol.Coerce(int),
         vol.Required("date"): cv.datetime,
         vol.Required("odometer_entity"): cv.entity_id,
-        vol.Required("quantity"): vol.Coerce(float),
+        vol.Required("quantity"): cv.entity_id,
         vol.Required("type"): cv.string,
         vol.Required("fuelsort_id"): vol.Coerce(int),
         vol.Required("quantity_unit_id"): vol.Coerce(int),
 
-        vol.Optional("price"): vol.Any(vol.Coerce(float), None),
+        vol.Optional("price"): cv.entity_id,
         vol.Optional("currency_id"): vol.Any(vol.Coerce(int), None),
         vol.Optional("pricetype"): vol.Any(vol.Coerce(int), None),
-        vol.Optional("note"): vol.Any(cv.string, None),
-        vol.Optional("stationname"): vol.Any(cv.string, None),
-        vol.Optional("location"): vol.Any(cv.string, None),
+        vol.Optional("note"): cv.entity_id,
+        vol.Optional("stationname"): cv.entity_id,
+        vol.Optional("location"): cv.entity_id,
         vol.Optional("country"): vol.Any(cv.string, None),
-        vol.Optional("bc_consumption"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("bc_quantity"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("bc_speed"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("latitude"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("longitude"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("percentage"): vol.Any(vol.Coerce(int), None),
-        vol.Optional("charging_power"): vol.Any(vol.Coerce(float), None),
-        vol.Optional("charging_duration"): vol.Any(vol.Coerce(int), None),
+        vol.Optional("bc_consumption"): cv.entity_id,
+        vol.Optional("bc_quantity"): cv.entity_id,
+        vol.Optional("bc_speed"): cv.entity_id,
+        vol.Optional("latitude"): cv.entity_id,
+        vol.Optional("longitude"): cv.entity_id,
+        vol.Optional("percentage"): cv.entity_id,
+        vol.Optional("charging_power"): cv.entity_id,
+        vol.Optional("charging_duration"): cv.entity_id,
         vol.Optional("charge_info_ac_dc"): vol.Any(cv.string, None),
         vol.Optional("charge_info_source"): vol.Any(cv.string, None),
         vol.Optional("streets"): vol.Any([cv.string], None),
