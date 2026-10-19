@@ -25,6 +25,7 @@ from .const import (
     VEHICLE_TYPE_ELECTRIC
 )
 
+from .api import api_get, api_headers
 from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,23 +45,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vehicle_type = entry.data.get(CONF_VEHICLE_TYPE)
     update_interval_hours = entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
     
-    headers = {
-        "Accept": "application/json",
-        "Application-Id": app_token,
-        "Authorization": bearer_token
-    }
+    headers = api_headers(app_token, bearer_token)
 
     session = async_get_clientsession(hass)
 
     async def async_update_data():
         """Fetch and process data from the API endpoint."""
         try:
-            async with session.get(API_VEHICLES_URL, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                response.raise_for_status()
-                vehicles = await response.json()
-                vehicle_info = next((v for v in vehicles if v["id"] == vehicle_id), None)
-                if not vehicle_info:
-                    raise UpdateFailed(f"Vehicle with ID {vehicle_id} not found")
+            vehicles = await api_get(session, API_VEHICLES_URL, headers)
+            vehicle_info = next((v for v in vehicles if int(v["id"]) == vehicle_id), None)
+            if not vehicle_info:
+                raise UpdateFailed(f"Vehicle with ID {vehicle_id} not found")
             
             trip_unit = vehicle_info.get("tripunit")
             if vehicle_type == VEHICLE_TYPE_ELECTRIC:
@@ -73,9 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             units = {"trip": trip_unit, "quantity": quantity_unit, "consumption": consumption_unit}
 
             fuelings_url = API_FUELINGS_URL_TPL.format(vehicle_id=vehicle_id)
-            async with session.get(f"{fuelings_url}?limit=20", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                response.raise_for_status()
-                all_fuelings = await response.json()
+            all_fuelings = await api_get(session, fuelings_url, headers, params={"limit": 20})
 
             # --- LÓGICA DE SEPARACIÓN MEJORADA ---
             gas_refuelings = []
@@ -102,10 +95,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             reminders = None
             try:
-                async with session.get(API_REMINDERS_URL, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                    if response.status == 200:
-                        all_reminders = await response.json()
-                        reminders = [r for r in all_reminders if r.get('vehicle') == vehicle_id]
+                all_reminders = await api_get(session, API_REMINDERS_URL, headers)
+                reminders = [r for r in all_reminders if r.get('vehicle') == vehicle_id]
             except Exception as e:
                 _LOGGER.debug("Could not fetch reminders: %s", e)
 
