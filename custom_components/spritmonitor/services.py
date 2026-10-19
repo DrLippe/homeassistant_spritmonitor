@@ -1,6 +1,6 @@
 """Define services for the Spritmonitor integration."""
 
-from datetime import datetime as dt
+from datetime import datetime as dt, date as date_type
 from math import isfinite
 import logging
 import aiohttp
@@ -57,7 +57,11 @@ async def _async_add_fueling(hass: HomeAssistant, call: ServiceCall) -> None:
     _LOGGER.info("Adding fueling for vehicle_id=%s", vehicle_id)
 
     # Parse date
-    data["date"] = _parse_date(data.get("date"))
+    date_entity = data["date"]
+    date_state = hass.states.get(date_entity)
+    if date_state is None or date_state.state in ("unknown", "unavailable", ""):
+        raise HomeAssistantError(f"Date entity {date_entity} is unavailable")
+    data["date"] = _parse_date(date_state.state)
 
     # Get the current odometer and derive trip from the last Spritmonitor entry.
     data["odometer"], data["trip"] = await _calculate_trip(hass, entry, data)
@@ -179,17 +183,23 @@ def _resolve_config_entry(hass: HomeAssistant, device_id: str):
 
 
 def _parse_date(value) -> dt:
+    """Parse Home Assistant date, datetime, or ISO-8601 timestamp states."""
     if isinstance(value, dt):
         return value
+    if isinstance(value, date_type):
+        return dt.combine(value, dt.min.time())
     if isinstance(value, str):
-        for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
-            try:
-                parsed_date = dt.strptime(value, fmt)
-                _LOGGER.debug("Parsed date: %s using format %s", parsed_date, fmt)
-                return parsed_date
-            except ValueError:
-                continue
-    raise HomeAssistantError(f"Invalid date format: {value}.")
+        value = value.strip()
+        try:
+            # ISO date and timestamp (including timezone offsets and trailing Z).
+            return dt.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+        try:
+            return dt.strptime(value, "%d.%m.%Y")
+        except ValueError:
+            pass
+    raise HomeAssistantError(f"Invalid date entity value: {value!r}")
 
 
 def _prepare_base_params(data: dict) -> dict:
