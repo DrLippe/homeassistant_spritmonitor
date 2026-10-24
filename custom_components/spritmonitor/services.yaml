@@ -239,116 +239,27 @@ add_fueling:
 
     note:
       name: Note
-      description: "Select an entity whose state supplies note."
+      description: "Enter a free-text note for this fueling."
       selector:
-        entity:
-          domain:
-            - sensor
-            - input_text
+        text: {}
 
     stationname:
       name: Station Name
-      description: "Select an entity whose state supplies stationname."
+      description: "Enter the station or charging-point name as free text."
       selector:
-        entity:
-          domain:
-            - sensor
-            - input_text
+        text: {}
 
     location:
       name: Location
-      description: "Select an entity whose state supplies location."
+      description: "Enter a free-text location for this fueling."
       selector:
-        entity:
-          domain:
-            - sensor
-            - input_text
+        text: {}
 
     country:
       name: Country
-      description: "Country of the gas station for the fueling to be added."
-      example: "D"
+      description: "Enter the numeric Spritmonitor country ID as text (e.g. 1 for Germany)."
       selector:
-        select:
-          options:
-            - value: "2"
-              label: "Austria"
-            - value: "35"
-              label: "Andorra"
-            - value: "5"
-              label: "Belgium"
-            - value: "39"
-              label: "Bulgaria"
-            - value: "36"
-              label: "Bosnia and Herzegovina"
-            - value: "6"
-              label: "Canada"
-            - value: "3"
-              label: "Switzerland"
-            - value: "7"
-              label: "Czech Republic"
-            - value: "1"
-              label: "Germany"
-            - value: "8"
-              label: "Denmark"
-            - value: "9"
-              label: "Spain"
-            - value: "38"
-              label: "Estonia"
-            - value: "4"
-              label: "France"
-            - value: "10"
-              label: "Finland"
-            - value: "11"
-              label: "Liechtenstein"
-            - value: "12"
-              label: "United Kingdom"
-            - value: "13"
-              label: "Greece"
-            - value: "14"
-              label: "Hungary"
-            - value: "33"
-              label: "Croatia"
-            - value: "15"
-              label: "Italy"
-            - value: "16"
-              label: "Ireland"
-            - value: "17"
-              label: "Iceland"
-            - value: "18"
-              label: "Luxembourg"
-            - value: "19"
-              label: "Lithuania"
-            - value: "20"
-              label: "Latvia"
-            - value: "21"
-              label: "Malta"
-            - value: "22"
-              label: "Morocco"
-            - value: "23"
-              label: "Monaco"
-            - value: "24"
-              label: "Norway"
-            - value: "25"
-              label: "Netherlands"
-            - value: "26"
-              label: "Portugal"
-            - value: "27"
-              label: "Poland"
-            - value: "28"
-              label: "Romania"
-            - value: "34"
-              label: "Ukraine"
-            - value: "29"
-              label: "Russia"
-            - value: "30"
-              label: "Sweden"
-            - value: "31"
-              label: "Slovakia"
-            - value: "32"
-              label: "Slovenia"
-            - value: "37"
-              label: "Serbia"
+        text: {}
 
     bc_consumption:
       name: BC Consumption
