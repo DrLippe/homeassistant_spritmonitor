@@ -196,15 +196,24 @@ def summarize_charge_costs(data, current_month=False):
 
 
 def charge_cost_total(data, monthly=False):
-    totals = summarize_charge_costs(data, current_month=monthly)
-    return totals[0] if totals is not None else None
+    """Use Spritmonitor's tank cost sum for lifetime; history for this month."""
+    if monthly:
+        totals = summarize_charge_costs(data, current_month=True)
+        return totals[0] if totals is not None else None
+    tank = data.get("electric_tank") or {}
+    return format_cost(tank.get("costsum"))
 
 
 def charge_average_price(data):
-    totals = summarize_charge_costs(data)
-    if totals is None or totals[1] <= 0:
+    """Weighted mean charging price based on Spritmonitor aggregate fields."""
+    tank = data.get("electric_tank") or {}
+    try:
+        cost = float(tank["costsum"])
+        quantity = float(tank["quantitysum"])
+        return round(cost / quantity, 3) if quantity > 0 else None
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
         return None
-    return round(totals[0] / totals[1], 3)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
