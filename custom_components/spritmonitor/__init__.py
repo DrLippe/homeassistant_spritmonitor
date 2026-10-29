@@ -68,12 +68,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             units = {"trip": trip_unit, "quantity": quantity_unit, "consumption": consumption_unit}
 
             fuelings_url = API_FUELINGS_URL_TPL.format(vehicle_id=vehicle_id)
-            # Fetch the full charge history for cost totals, rather than only 20 entries.
+            # Fetch charge entries for monthly costs (the lifetime total comes from tanks.json).
             # If the API returns as many entries as requested, completeness cannot
             # be established and aggregate sensors must remain unavailable.
             history_limit = 1000
             all_fuelings = await api_get(session, fuelings_url, headers, params={"limit": history_limit})
             history_complete = len(all_fuelings) < history_limit
+            # Aggregated totals are maintained by Spritmonitor itself.
+            tanks = await api_get(session, f"vehicle/{vehicle_id}/tanks.json", headers)
+            electric_tank = next(
+                (tank for tank in tanks if str(tank.get("id")) == "1" and vehicle_type == VEHICLE_TYPE_ELECTRIC),
+                None,
+            )
+            if electric_tank is None and vehicle_type == VEHICLE_TYPE_ELECTRIC and len(tanks) == 1:
+                electric_tank = tanks[0]
 
             # --- LÓGICA DE SEPARACIÓN MEJORADA ---
             gas_refuelings = []
@@ -110,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "refuelings": refuelings, "gas_refuelings": gas_refuelings,
                 "last_gas_refueling": last_gas_refueling, "electric_charges": electric_charges,
                 "last_electric_charge": last_electric_charge, "reminders": reminders,
-                "history_complete": history_complete,
+                "history_complete": history_complete, "electric_tank": electric_tank,
             }
         except aiohttp.ClientError as e:
             raise UpdateFailed(f"Connection error with Spritmonitor: {e}")
