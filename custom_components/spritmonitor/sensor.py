@@ -6,6 +6,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.const import UnitOfEnergy
 from datetime import datetime
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN, MANUFACTURER, CONF_VEHICLE_TYPE, CONF_CURRENCY, 
@@ -159,6 +160,52 @@ def calculate_efficiency_per_distance(data):
     return round(100 / consumption, 2)
 
 
+
+def summarize_charge_costs(data, current_month=False):
+    """Return (cost, energy) only when the entire history has known costs."""
+    if not data.get("history_complete"):
+        return None
+    charges = data.get("electric_charges")
+    if charges is None:
+        return None
+    month = dt_util.now().strftime("%m.%Y")
+    total_cost = 0.0
+    total_energy = 0.0
+    for charge in charges:
+        if current_month:
+            try:
+                charge_month = datetime.strptime(charge["date"], "%d.%m.%Y").strftime("%m.%Y")
+            except (KeyError, ValueError, TypeError):
+                return None
+            if charge_month != month:
+                continue
+        try:
+            cost = charge.get("cost")
+            quantity = charge.get("quantity")
+            if cost is None or quantity is None:
+                return None
+            cost = float(cost)
+            quantity = float(quantity)
+            if cost < 0 or quantity < 0:
+                return None
+        except (TypeError, ValueError):
+            return None
+        total_cost += cost
+        total_energy += quantity
+    return (round(total_cost, 2), total_energy)
+
+
+def charge_cost_total(data, monthly=False):
+    totals = summarize_charge_costs(data, current_month=monthly)
+    return totals[0] if totals is not None else None
+
+
+def charge_average_price(data):
+    totals = summarize_charge_costs(data)
+    if totals is None or totals[1] <= 0:
+        return None
+    return round(totals[0] / totals[1], 3)
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     vehicle_type = config_entry.data.get(CONF_VEHICLE_TYPE)
@@ -208,6 +255,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             SpritmonitorSensor(coordinator, "battery_capacity", lambda d: float(d['vehicle'].get('capacity', 0)), device_class=SensorDeviceClass.ENERGY, state_class=None),
             SpritmonitorSensor(coordinator, "total_energy_charged", lambda d: float(d['vehicle'].get('quantitysum', 0)), device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
             SpritmonitorSensor(coordinator, "avg_energy_consumption", lambda d: float(d['vehicle'].get('consumption', 0)), state_class=SensorStateClass.MEASUREMENT),
+            SpritmonitorSensor(coordinator, "last_charge_cost", lambda d: format_cost((d.get('last_electric_charge') or {}).get('cost')), device_class=SensorDeviceClass.MONETARY),
+            SpritmonitorSensor(coordinator, "total_charge_cost", lambda d: charge_cost_total(d), device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.TOTAL),
+            SpritmonitorSensor(coordinator, "monthly_charge_cost", lambda d: charge_cost_total(d, monthly=True), device_class=SensorDeviceClass.MONETARY),
+            SpritmonitorSensor(coordinator, "average_charge_price_per_kwh", lambda d: charge_average_price(d)),
             SpritmonitorSensor(coordinator, "last_charge_energy", lambda d: float(d.get('last_electric_charge', {}).get('quantity', 0)), device_class=SensorDeviceClass.ENERGY, state_class=None),
             SpritmonitorSensor(coordinator, "last_charge_price_per_kwh", lambda d: calculate_price_per_unit(d.get('last_electric_charge', {}).get('cost'), d.get('last_electric_charge', {}).get('quantity')), state_class=SensorStateClass.MEASUREMENT),
             SpritmonitorSensor(coordinator, "last_charge_consumption", lambda d: float(d.get('last_electric_charge', {}).get('consumption', 0)), state_class=SensorStateClass.MEASUREMENT),
@@ -291,7 +342,7 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
             return UnitOfEnergy.KILO_WATT_HOUR
         if self.sensor_id in ["avg_energy_consumption", "last_charge_consumption", "consumption_consistency_electric"]:
             return f"kWh/100{trip_unit}" if trip_unit else "kWh/100km"
-        if self.sensor_id in ["last_charge_price_per_kwh", "price_variability_electric"]:
+        if self.sensor_id in ["last_charge_price_per_kwh", "price_variability_electric", "average_charge_price_per_kwh"]:
             return f"{currency}/{UnitOfEnergy.KILO_WATT_HOUR}"
         # Distance-per-kWh efficiency (e.g. "mi/kWh" or "km/kWh") — inverse of avg_energy_consumption
         if self.sensor_id == "efficiency_per_distance":
@@ -300,7 +351,7 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
         # Common and calculated sensors
         if self.sensor_id in ["total_distance", "last_refuel_odometer", "last_refuel_trip", "km_to_next_service", "next_service_km", "range_estimate", "full_battery_range_estimate"]:
             return trip_unit
-        if self.sensor_id == "last_refuel_cost":
+        if self.sensor_id in ["last_refuel_cost", "last_charge_cost", "total_charge_cost", "monthly_charge_cost"]:
             return currency
         if "cost_per_distance" in self.sensor_id:
             return f"{currency}/{trip_unit}"
@@ -357,6 +408,8 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
             "last_refuel_quantity": "mdi:gas-station", "fuel_level_estimate": "mdi:gauge", "range_estimate": "mdi:gas-station-off",
             "battery_capacity": "mdi:battery", "total_energy_charged": "mdi:lightning-bolt", "avg_energy_consumption": "mdi:chart-line", 
             "last_charge_energy": "mdi:ev-station", "last_charge_price_per_kwh": "mdi:currency-usd",
+            "last_charge_cost": "mdi:cash", "total_charge_cost": "mdi:cash-multiple",
+            "monthly_charge_cost": "mdi:calendar-month", "average_charge_price_per_kwh": "mdi:cash",
             "last_charge_consumption": "mdi:car-speed-limiter", "full_battery_range_estimate": "mdi:map-marker-radius", 
             "consumption_trend": "mdi:trending-up", "consumption_consistency": "mdi:chart-bell-curve", "avg_refuel_quantity": "mdi:gas-station-outline", 
             "avg_days_between_refuels": "mdi:calendar-range", "price_variability": "mdi:chart-line-variant", 
