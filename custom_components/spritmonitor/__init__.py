@@ -68,7 +68,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             units = {"trip": trip_unit, "quantity": quantity_unit, "consumption": consumption_unit}
 
             fuelings_url = API_FUELINGS_URL_TPL.format(vehicle_id=vehicle_id)
-            all_fuelings = await api_get(session, fuelings_url, headers, params={"limit": 20})
+            # Fetch the full charge history for cost totals, rather than only 20 entries.
+            # If the API returns as many entries as requested, completeness cannot
+            # be established and aggregate sensors must remain unavailable.
+            history_limit = 1000
+            all_fuelings = await api_get(session, fuelings_url, headers, params={"limit": history_limit})
+            history_complete = len(all_fuelings) < history_limit
 
             # --- LÓGICA DE SEPARACIÓN MEJORADA ---
             gas_refuelings = []
@@ -105,6 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "refuelings": refuelings, "gas_refuelings": gas_refuelings,
                 "last_gas_refueling": last_gas_refueling, "electric_charges": electric_charges,
                 "last_electric_charge": last_electric_charge, "reminders": reminders,
+                "history_complete": history_complete,
             }
         except aiohttp.ClientError as e:
             raise UpdateFailed(f"Connection error with Spritmonitor: {e}")
