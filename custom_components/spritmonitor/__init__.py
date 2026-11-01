@@ -70,8 +70,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             fuelings_url = API_FUELINGS_URL_TPL.format(vehicle_id=vehicle_id)
             # Fetch charge entries for monthly costs (the lifetime total comes from tanks.json).
-            # If the API returns as many entries as requested, completeness cannot
-            # be established and aggregate sensors must remain unavailable.
+            # If the API reaches the limit, monthly cost sensors remain unavailable;
+            # lifetime totals are still read from the tank aggregates.
             history_limit = 1000
             all_fuelings = await api_get(session, fuelings_url, headers, params={"limit": history_limit})
             history_complete = len(all_fuelings) < history_limit
@@ -99,8 +99,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 electric_charges = sorted(all_fuelings, key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'), reverse=True)
             else:
                 # Para Combustión y PHEV, filtramos por tankid.
-                gas_refuelings = sorted([f for f in all_fuelings if f.get('tankid') == 1], key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'), reverse=True)
-                electric_charges = sorted([f for f in all_fuelings if f.get('tankid') == 2], key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'), reverse=True)
+                gas_refuelings = sorted([f for f in all_fuelings if str(f.get('tankid')) == '1'], key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'), reverse=True)
+                electric_charges = sorted([f for f in all_fuelings if str(f.get('tankid')) == '2'], key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'), reverse=True)
             # --- FIN DE LA LÓGICA ---
 
             last_gas_refueling = gas_refuelings[0] if gas_refuelings else None
