@@ -215,6 +215,41 @@ def charge_average_price(data):
         return None
 
 
+def fuel_cost_total(data, monthly=False):
+    """Fuel totals from Spritmonitor, monthly values from complete history."""
+    if monthly:
+        return summarize_fuel_month(data)
+    return format_cost((data.get("fuel_tank") or {}).get("costsum"))
+
+
+def summarize_fuel_month(data):
+    if not data.get("history_complete"):
+        return None
+    month = dt_util.now().strftime("%m.%Y")
+    total = 0.0
+    for fueling in data.get("gas_refuelings", []):
+        try:
+            if datetime.strptime(fueling["date"], "%d.%m.%Y").strftime("%m.%Y") != month:
+                continue
+            value = fueling.get("cost")
+            if value is None or float(value) < 0:
+                return None
+            total += float(value)
+        except (KeyError, TypeError, ValueError):
+            return None
+    return round(total, 2)
+
+
+def average_fuel_price(data):
+    tank = data.get("fuel_tank") or {}
+    try:
+        cost = float(tank["costsum"])
+        quantity = float(tank["quantitysum"])
+        return round(cost / quantity, 3) if quantity > 0 else None
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     vehicle_type = config_entry.data.get(CONF_VEHICLE_TYPE)
@@ -248,6 +283,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     if is_combustion:
         combustion_sensors = [
+            SpritmonitorSensor(coordinator, "total_fuel_cost", lambda d: fuel_cost_total(d), device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.TOTAL),
+            SpritmonitorSensor(coordinator, "monthly_fuel_cost", lambda d: fuel_cost_total(d, monthly=True), device_class=SensorDeviceClass.MONETARY),
+            SpritmonitorSensor(coordinator, "average_fuel_price_per_liter", lambda d: average_fuel_price(d)),
             SpritmonitorSensor(coordinator, "fuel_capacity", lambda d: float(d['vehicle'].get('capacity', 0)), device_class=SensorDeviceClass.VOLUME),
             SpritmonitorSensor(coordinator, "total_fuel", lambda d: float(d['vehicle'].get('quantitysum', 0)), device_class=SensorDeviceClass.VOLUME, state_class=SensorStateClass.TOTAL_INCREASING),
             SpritmonitorSensor(coordinator, "avg_consumption", lambda d: float(d['vehicle'].get('consumption', 0)), state_class=SensorStateClass.MEASUREMENT),
@@ -343,7 +381,7 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
             return units.get("quantity")
         if self.sensor_id in ["avg_consumption", "last_refuel_consumption", "consumption_consistency_fuel", "consumption_consistency"]:
             return units.get("consumption")
-        if self.sensor_id in ["last_refuel_price_per_liter", "price_variability_fuel", "price_variability"]:
+        if self.sensor_id in ["last_refuel_price_per_liter", "price_variability_fuel", "price_variability", "average_fuel_price_per_liter"]:
              return f"{currency}/{units.get('quantity')}"
 
         # Electric sensors
@@ -360,7 +398,7 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
         # Common and calculated sensors
         if self.sensor_id in ["total_distance", "last_refuel_odometer", "last_refuel_trip", "km_to_next_service", "next_service_km", "range_estimate", "full_battery_range_estimate"]:
             return trip_unit
-        if self.sensor_id in ["last_refuel_cost", "last_charge_cost", "total_charge_cost", "monthly_charge_cost"]:
+        if self.sensor_id in ["last_refuel_cost", "last_charge_cost", "total_charge_cost", "monthly_charge_cost", "total_fuel_cost", "monthly_fuel_cost"]:
             return currency
         if "cost_per_distance" in self.sensor_id:
             return f"{currency}/{trip_unit}"
@@ -419,6 +457,8 @@ class SpritmonitorSensor(CoordinatorEntity, SensorEntity):
             "last_charge_energy": "mdi:ev-station", "last_charge_price_per_kwh": "mdi:currency-usd",
             "last_charge_cost": "mdi:cash", "total_charge_cost": "mdi:cash-multiple",
             "monthly_charge_cost": "mdi:calendar-month", "average_charge_price_per_kwh": "mdi:cash",
+            "total_fuel_cost": "mdi:cash-multiple", "monthly_fuel_cost": "mdi:calendar-month",
+            "average_fuel_price_per_liter": "mdi:cash",
             "last_charge_consumption": "mdi:car-speed-limiter", "full_battery_range_estimate": "mdi:map-marker-radius", 
             "consumption_trend": "mdi:trending-up", "consumption_consistency": "mdi:chart-bell-curve", "avg_refuel_quantity": "mdi:gas-station-outline", 
             "avg_days_between_refuels": "mdi:calendar-range", "price_variability": "mdi:chart-line-variant", 
