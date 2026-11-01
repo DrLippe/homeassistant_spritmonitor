@@ -22,7 +22,8 @@ from .const import (
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
     CONF_VEHICLE_TYPE,
-    VEHICLE_TYPE_ELECTRIC
+    VEHICLE_TYPE_ELECTRIC,
+    VEHICLE_TYPE_PHEV,
 )
 
 from .api import api_get, api_headers
@@ -76,12 +77,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             history_complete = len(all_fuelings) < history_limit
             # Aggregated totals are maintained by Spritmonitor itself.
             tanks = await api_get(session, f"vehicle/{vehicle_id}/tanks.json", headers)
-            electric_tank = next(
-                (tank for tank in tanks if str(tank.get("id")) == "1" and vehicle_type == VEHICLE_TYPE_ELECTRIC),
-                None,
-            )
-            if electric_tank is None and vehicle_type == VEHICLE_TYPE_ELECTRIC and len(tanks) == 1:
-                electric_tank = tanks[0]
+            # Tank 1 is fuel, tank 2 is electricity on PHEVs.
+            # Single-fuel vehicles use the first/only tank.
+            tanks_by_id = {str(t.get("id")): t for t in tanks if isinstance(t, dict)}
+            if vehicle_type == VEHICLE_TYPE_PHEV:
+                fuel_tank = tanks_by_id.get("1")
+                electric_tank = tanks_by_id.get("2")
+            elif vehicle_type == VEHICLE_TYPE_ELECTRIC:
+                fuel_tank = None
+                electric_tank = tanks_by_id.get("1") or (tanks[0] if len(tanks) == 1 else None)
+            else:
+                electric_tank = None
+                fuel_tank = tanks_by_id.get("1") or (tanks[0] if len(tanks) == 1 else None)
 
             # --- LÓGICA DE SEPARACIÓN MEJORADA ---
             gas_refuelings = []
@@ -119,6 +126,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "last_gas_refueling": last_gas_refueling, "electric_charges": electric_charges,
                 "last_electric_charge": last_electric_charge, "reminders": reminders,
                 "history_complete": history_complete, "electric_tank": electric_tank,
+                "fuel_tank": fuel_tank,
             }
         except aiohttp.ClientError as e:
             raise UpdateFailed(f"Connection error with Spritmonitor: {e}")
