@@ -159,6 +159,15 @@
       },
       "average_charge_price_per_kwh": {
         "name": "Durchschnittlicher Ladepreis/kWh"
+      },
+      "total_fuel_cost": {
+        "name": "Tankkosten gesamt"
+      },
+      "monthly_fuel_cost": {
+        "name": "Tankkosten aktueller Monat"
+      },
+      "average_fuel_price_per_liter": {
+        "name": "Durchschnittlicher Kraftstoffpreis pro Einheit"
       }
     }
   },
