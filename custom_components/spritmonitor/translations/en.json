@@ -197,6 +197,15 @@
       },
       "average_charge_price_per_kwh": {
         "name": "Average Charge Price/kWh"
+      },
+      "total_fuel_cost": {
+        "name": "Total Fuel Cost"
+      },
+      "monthly_fuel_cost": {
+        "name": "Current Month Fuel Cost"
+      },
+      "average_fuel_price_per_liter": {
+        "name": "Average Fuel Price per Unit"
       }
     }
   },
