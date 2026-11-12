@@ -82,6 +82,12 @@ def _resolve_entity_fields(hass: HomeAssistant, data: dict) -> None:
         entity_id = data.get(field)
         if entity_id is None:
             continue
+        # Charging duration may be a directly templated number of minutes.
+        if field == "charging_duration" and isinstance(entity_id, (int, float)):
+            if not isfinite(entity_id) or entity_id < 0:
+                raise HomeAssistantError("Charging duration must be nonnegative and finite")
+            data[field] = int(entity_id + 0.5)
+            continue
         state = hass.states.get(entity_id)
         if state is None or state.state in ("unknown", "unavailable", ""):
             raise HomeAssistantError(f"Entity {entity_id} for {field} is unavailable")
@@ -92,9 +98,14 @@ def _resolve_entity_fields(hass: HomeAssistant, data: dict) -> None:
                 numeric = float(state.state)
                 if not isfinite(numeric):
                     raise ValueError("non-finite number")
-                if value_type is int and not numeric.is_integer():
-                    raise ValueError("not an integer")
-                value = value_type(numeric)
+                if field == "charging_duration":
+                    if numeric < 0:
+                        raise ValueError("negative duration")
+                    value = int(numeric + 0.5)
+                else:
+                    if value_type is int and not numeric.is_integer():
+                        raise ValueError("not an integer")
+                    value = value_type(numeric)
         except (ValueError, TypeError) as err:
             raise HomeAssistantError(
                 f"Entity {entity_id} has an invalid value for {field}"
