@@ -77,7 +77,7 @@ SERVICE_ADD_FUELING_SCHEMA = vol.Schema(
         vol.Optional("longitude"): cv.entity_id,
         vol.Optional("percentage"): cv.entity_id,
         vol.Optional("charging_power"): cv.entity_id,
-        vol.Optional("charging_duration"): cv.entity_id,
+        vol.Optional("charging_duration"): vol.Any(cv.entity_id, vol.Coerce(float)),
         vol.Optional("charge_info_ac_dc"): vol.Any(cv.string, None),
         vol.Optional("charge_info_source"): vol.Any(cv.string, None),
         vol.Optional("streets"): vol.Any([cv.string], None),
