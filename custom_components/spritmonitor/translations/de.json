@@ -23,6 +23,46 @@
       "already_configured": "Das Fahrzeug ist bereits konfiguriert."
     }
   },
+  "services": {
+    "add_fueling": {
+      "name": "Tank- oder Ladevorgang hinzufügen",
+      "description": "Erfasst einen neuen Tank- oder Ladevorgang bei Spritmonitor.",
+      "fields": {
+        "vehicle_device": {
+          "name": "Fahrzeug",
+          "description": "Fahrzeug, dem der Vorgang zugeordnet wird."
+        },
+        "tank_id": {
+          "name": "Tank"
+        },
+        "date": {
+          "name": "Datum"
+        },
+        "odometer_entity": {
+          "name": "Kilometerstand"
+        },
+        "quantity": {
+          "name": "Tank- oder Lademenge"
+        },
+        "price": {
+          "name": "Preis"
+        },
+        "percentage": {
+          "name": "Akkustand"
+        },
+        "charging_power": {
+          "name": "Ladeleistung"
+        },
+        "charging_duration": {
+          "name": "Ladedauer"
+        },
+        "attributes_tires": {
+          "name": "Bereifung",
+          "description": "Sommer- oder Winterreifen."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "brand_model": {
