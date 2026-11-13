@@ -39,7 +39,10 @@ add_fueling:
       required: true
       selector:
         entity:
-          domain: sensor
+          domain: 
+            - sensor
+            - input_number
+            - number
 
     quantity:
       name: Quantity
@@ -369,7 +372,7 @@ add_fueling:
 
     streets:
       name: Streets
-      description: "Type of street drivren on during the trip."
+      description: "Type of street driven on during the trip."
       example: "city"
       selector:
         select:
